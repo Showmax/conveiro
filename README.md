@@ -22,7 +22,10 @@ pip install conveiro
 
 ## Examples
 
-For examples how to use this library please take a look at jupyter notebooks in `doc/` folder.
+For examples how to use this library please take a look at jupyter notebooks in `docs/` folder:
+
+* https://github.com/Showmax/conveiro/tree/master/docs/deep_dream.ipynb
+* https://github.com/Showmax/conveiro/tree/master/docs/cdfs.ipynb
 
 Simplest example:
 
