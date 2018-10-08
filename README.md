@@ -23,3 +23,27 @@ pip install conveiro
 ## Examples
 
 For examples how to use this library please take a look at jupyter notebooks in `doc/` folder.
+
+Simplest example:
+
+```python
+import tensorflow as tf
+import tensornets as nets
+from conveiro import cdfs
+
+input_t, decorrelated_image_t, coeffs_t = cdfs.setup(224)
+
+model = nets.Inception1(input_t)
+graph = tf.get_default_graph()
+
+with tf.Session() as sess:
+    sess.run(model.pretrained())
+
+    objective = graph.get_tensor_by_name("inception1/block3b/concat:0")
+    image = cdfs.render_image(sess, decorrelated_image_t, coeffs_t, objective[..., 55], 0.01)
+    cdfs.show_image(cdfs.process_image(image))
+```
+
+![CDFS output](docs/example.png)
+
+**Note** The API is preliminary and may change in future versions.
