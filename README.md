@@ -20,6 +20,12 @@ All of these methods are based on:
 pip install conveiro
 ```
 
+Development version
+
+```
+pip install -e .    # from cloned repository
+```
+
 ## Examples
 
 For examples how to use this library please take a look at jupyter notebooks in `docs/` folder:
