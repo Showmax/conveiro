@@ -22,7 +22,7 @@ setup(
     ],
     description='Visualization of filters in convolutional neural networks',
     include_package_data=True,
-    install_requires=['numpy', 'matplotlib', 'scipy', 'opencv-python'],
+    install_requires=['numpy', 'matplotlib', 'scipy'],
     extras_require = {
         'gpu' : ['tensorflow-gpu'],
         'cpu' : ['tensorflow'],

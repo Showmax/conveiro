@@ -33,7 +33,6 @@ There are few more steps but this is the essence of this technique.
 * Tensorflow (CPU or GPU variant)
 * Numpy
 * Matplotlib
-* OpenCV-Python
 
 ## Installation
 
