@@ -1,10 +1,31 @@
 # Conveiro
 
-Conveiro is an open source library for feature visualization in deep convolutional networks. It implements multiple techniques for visualization, such as laplace, multiscale,  deep dream and CDFS.
+Conveiro is an open source library for feature visualization in deep convolutional networks. It implements multiple techniques for visualization, such as deep dream and CDFS.
 
 All of these methods are based on:
-* https://distill.pub/2017/feature-visualization/ 
-* https://github.com/tensorflow/tensorflow/blob/master/tensorflow/examples/tutorials/deepdream/deepdream.ipynb
+
+### Deep dream
+Deep dream is implementation of technique based on 
+  * https://github.com/tensorflow/tensorflow/blob/master/tensorflow/examples/tutorials/deepdream/deepdream.ipynb
+* https://ai.googleblog.com/2015/06/inceptionism-going-deeper-into-neural.html
+
+If you don't want to read it and want short explenation here it is. 
+* We create random image (or we can use seed image)
+* We feed this image to network and optimize it based on calculated gradients
+* We employ few clever tricks based on scaling and frequencies
+
+There are few more steps but this is the essence of this technique.  
+
+### CDFS
+CDFS (color-decorrelated fourier space) is custom implementation of technique based on
+* https://distill.pub/2017/feature-visualization/
+
+If you don't want to read it and want short explenation here it is. 
+* We generate random complex coefficient
+* We use said coefficients to generate image by inverse fourier transformation
+*  After we feed this image to network we can calculate gradients and use gradient descent to optimize these coefficient
+
+There are few more steps but this is the essence of this technique.
 
 ## Requirements
 
