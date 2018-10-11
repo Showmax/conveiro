@@ -19,6 +19,7 @@ There are few more steps but this is the essence of this technique.
 ### CDFS
 CDFS (color-decorrelated fourier space) is custom implementation of technique based on
 * https://distill.pub/2017/feature-visualization/
+* https://github.com/tensorflow/lucid
 
 If you don't want to read it and want short explenation here it is. 
 * We generate random complex coefficient
