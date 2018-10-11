@@ -66,14 +66,14 @@ def calc_grad_tiled(image, t_grad, session, image_pl, tile_size=512, is_training
   return np.roll(np.roll(grad, -sx, 1), -sy, 0)
 
 def render_multiscale(objective, image_pl, session, resize_op, resize_image_pl, resize_shape_pl, iter_n=10, step=1.0,
-                      octave_n=3, octave_scale=1.4, means=None, is_training_pl=None, base_image=None):
+                      octave_n=3, octave_scale=1.4, means=None, is_training_pl=None, base_image=None, width=224, height=224):
 
   # compute a scalar value to optimize and derive its gradient
   score = tf.reduce_mean(objective)
   gradient = tf.gradients(score, image_pl)[0]
 
   if base_image is None:
-    image = get_base_image(224, 224, means=means)
+    image = get_base_image(width, height, means=means)
   else:
     image = base_image
 
@@ -162,13 +162,13 @@ def setup_lapnorm(scale_n=4):
 
 def render_lapnorm(objective, session, image_pl, lap_norm, lap_norm_pl, resize_op, resize_image_pl,
                    resize_shape_pl, iter_n=10, step=1.0, octave_n=3, octave_scale=1.4, means=None,
-                   is_training_pl=None, base_image=None):
+                   is_training_pl=None, base_image=None, width=224, height=224):
 
   score = tf.reduce_mean(objective)
   gradient = tf.gradients(score, image_pl)[0]
 
   if base_image is None:
-    image = get_base_image(224, 224, means=means)
+    image = get_base_image(width, height, means=means)
   else:
     image = base_image
 
