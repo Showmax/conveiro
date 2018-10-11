@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import tensorflow as tf
 
-import visualization.utils as model_utils
+import conveiro.utils as model_utils
 
 means_rgb = [0.48, 0.46, 0.41]
 color_correlation_svd_sqrt_rgb = np.asarray([[0.26, 0.09, 0.02],
