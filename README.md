@@ -1,10 +1,6 @@
 # Conveiro
 
-<<<<<<< HEAD
-Conveiro is an open source library for feature visualization in deep convolutional networks. It implements multiple techniques for visualization, such as deep dream and CDFS.
-=======
 Conveiro (convolutional + oneiro, Greek for "dream") is an open source library for feature visualization in deep convolutional networks. It implements multiple techniques for visualization, such as laplace, multiscale,  deep dream and CDFS.
->>>>>>> c1af76401eefa7d59123e733a4edd1ca7e627505
 
 All of these methods are based on:
 
