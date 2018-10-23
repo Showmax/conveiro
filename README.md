@@ -5,7 +5,9 @@ Conveiro (convolutional + oneiro, Greek for "dream") is an open source library f
 All of these methods are based on:
 
 ### Deep dream
-Deep dream is implementation of technique based on 
+
+Deep dream is implementation of technique based on
+
   * https://github.com/tensorflow/tensorflow/blob/master/tensorflow/examples/tutorials/deepdream/deepdream.ipynb
 * https://ai.googleblog.com/2015/06/inceptionism-going-deeper-into-neural.html
 

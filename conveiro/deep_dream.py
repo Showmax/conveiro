@@ -147,7 +147,7 @@ def lap_split(img):
 def lap_split_n(img, n):
     """ Build Laplacian pyramid with n splits. """
     levels = []
-    for i in range(n):
+    for _ in range(n):
         img, hi = lap_split(img)
         levels.append(hi)
     levels.append(img)
@@ -248,7 +248,7 @@ def render_lapnorm(objective, session, image_pl, lap_norm, lap_norm_pl, resize_o
 
       image = session.run(resize_op, feed_dict=feed_dict)
 
-    for i in range(iter_n):
+    for _ in range(iter_n):
       g = calc_grad_tiled(image, gradient, session, image_pl, is_training_pl=is_training_pl)
       feed_dict = {
         lap_norm_pl: g
@@ -304,7 +304,7 @@ def render_deepdream(objective, session, image_pl, img0, resize_op, resize_image
   # split the image into a number of octaves
   img = img0
   octaves = []
-  for i in range(octave_n-1):
+  for _ in range(octave_n-1):
       hw = img.shape[:2]
       lo = resize(img, np.int32(np.float32(hw)/octave_scale), resize_image_pl, resize_shape_pl, resize_op, session)
       hi = img-resize(lo, hw, resize_image_pl, resize_shape_pl, resize_op, session)
