@@ -1,14 +1,17 @@
-import cv2, os, math
+import os, math
 import numpy as np
 import matplotlib.pyplot as plt
 import tensorflow as tf
 
 import conveiro.utils as model_utils
 
-means_rgb = [0.48, 0.46, 0.41]
-color_correlation_svd_sqrt_rgb = np.asarray([[0.26, 0.09, 0.02],
+MEANS_RGB = [0.48, 0.46, 0.41]
+COLOR_CORRELATION_SVD_SQRT_RGB = np.asarray([[0.26, 0.09, 0.02],
                                              [0.27, 0.00, -0.05],
                                              [0.27, -0.09, 0.03]]).astype("float32")
+CROP_NONE = 1
+CROP_CENTER = 2
+CROP_RANDOM = 3
 
 def get_coeffs_zeros(size):
   """
@@ -21,33 +24,23 @@ def get_coeffs_zeros(size):
 
 def get_coeffs_random_noise(size, std=0.01):
   """
-  Get Fourier coefficients (that will be used to parameterize the image) initialized with random uniform noise.
+  Get Fourier coefficients (that will be used to parameterize the image) initialized with random gaussian noise.
   :param size:      Size of the image.
-  :param interval:  Sample uniformly from -N to N.
+  :param std:       Sample uniformly from -N to N.
   :return:          Three sets of Fourier coefficients for B, G and R channels.
   """
   return tf.Variable(std * np.random.randn(size, size // 2 + 1, 3, 2),
                      name="coeffs", dtype=tf.float32)
 
-def get_coeffs_random_noise_3d(size, std=0.01, stack_size=32):
-  """
-  Get Fourier coefficients (that will be used to parameterize the image) initialized with random uniform noise.
-  :param size:      Size of the image.
-  :param interval:  Sample uniformly from -N to N.
-  :return:          Three sets of Fourier coefficients for B, G and R channels.
-  """
-  return tf.Variable(std * np.random.randn(stack_size, size, size // 2 + 1, 3, 2),
-                     name="coeffs", dtype=tf.float32)
-
-def get_image_random_noise(size, variance=1):
+def get_image_random_noise(size, std=1):
   """
   Get an image variable filled with random noise.
   :param size:        Size of the image.
-  :param variance:    Variance of the noise.
+  :param std:    Variance of the noise.
   :return:            Image variable.
   """
 
-  return tf.Variable(np.random.normal(0, variance, size=size), name="image", dtype=tf.float32)
+  return tf.Variable(np.random.normal(0, std, size=size), name="image", dtype=tf.float32)
 
 def coeffs_to_spectrum(coeffs):
   """
@@ -80,19 +73,31 @@ def get_spectrum_scale(size):
   return spectrum_scale
 
 def scale_frequency_spectrum(spectrum, spectrum_scale):
-
+  """
+  Applies spectrum scale to generated spectrum.
+  :param spectrum:        Three Fourier spectra of R, G and B channels.
+  :param spectrum_scale:  Frequency scale for Fourier spectrum.
+  :return:                Scaled spectrum.
+  """
   return tf.stack([spectrum[..., i] * spectrum_scale for i in range(spectrum.shape[-1].value)], axis=-1)
 
 def spectrum_to_image(spectrum, size):
   """
   Convert Fourier spectrum to an RGB image.
   :param spectrum:        Three Fourier spectra of R, G and B channels.
+  :param size:            Size of the image.
   :return:                RGB image.
   """
 
   return tf.stack([tf.spectral.irfft2d(spectrum[..., i], fft_length=(size, size)) for i in range(3)], axis=-1)
 
 def decorrelate_colors(image, color_correlation_svd_sqrt):
+  """
+  Decorrelate colors of image.
+  :param image:                       Input image.
+  :param color_correlation_svd_sqrt:  Color correlation matrix.
+  :return:                            Decorrelated image.
+  """
 
   max_norm_svd_sqrt = np.max(np.linalg.norm(color_correlation_svd_sqrt, axis=0))
 
@@ -103,30 +108,6 @@ def decorrelate_colors(image, color_correlation_svd_sqrt):
 
   return image
 
-def decompose_cov_matrix(cov_matrix, size=None):
-  """
-  Perform Cholesky decomposition on a covariance matrix.
-  :param cov_matrix:      Covariance matrix.
-  :param size:            Crop covariance matrix to this size (optional).
-  :return:                L matrix.
-  """
-
-  # maybe crop covariance matrix
-  if size is not None:
-    if cov_matrix.shape[0] < size or cov_matrix.shape[1] < size:
-      raise ValueError("Covariance matrix is smaller than {}x{}.".format(size, size))
-    elif cov_matrix.shape[0] > size or cov_matrix.shape[2] > size:
-      diff_x = cov_matrix.shape[0] - size
-      diff_y = cov_matrix.shape[1] - size
-
-      offset_left = math.ceil(diff_x / 2)
-      offset_right = math.floor(diff_x / 2)
-      offset_top = math.ceil(diff_y / 2)
-      offset_bottom = math.floor(diff_y / 2)
-
-      cov_matrix = cov_matrix[offset_left:-offset_right, offset_top:-offset_bottom]
-
-  return np.linalg.cholesky(cov_matrix).astype(np.float32)
 
 def crop_center(image, height, width):
   """
@@ -144,9 +125,6 @@ def crop_center(image, height, width):
 
   return image
 
-CROP_NONE = 1
-CROP_CENTER = 2
-CROP_RANDOM = 3
 
 def data_augmentation(image, padding=16, scaling_factors=(1, 0.975, 1.025, 0.95, 1.05),
                       angles=(-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5), jitter_1=16, jitter_2=8,
@@ -159,7 +137,7 @@ def data_augmentation(image, padding=16, scaling_factors=(1, 0.975, 1.025, 0.95,
   :param angles:              Angles to randomly choose from, None for no rotations.
   :param jitter_1:            Jitter before scaling and rotating up to N pixels.
   :param jitter_2:            Jitter after scaling and rotating up to N pixels.
-  :param random_crop:         Crop the padded image randomly.
+  :param crop_type:         Crop the padded image randomly.
   :param crop_size:           How big image to crop. Default is the original image size.
   :return:                    Augmented image.
   """
@@ -276,29 +254,6 @@ def setup_optimizer(target, coeffs, learning_rate, use_adam=False, namespace="op
     grads = opt.compute_gradients(-target, var_list=[coeffs])
     return opt.apply_gradients(grads)
 
-def process_image(image, scale=0.4, bgr=False):
-  """
-  Normalize image and maybe swap channels.
-  :param image:     An image.
-  :param scale:     Scaling parameter.
-  :param bgr:       Swap red and blue channels.
-  :return:          Normalized image
-  """
-
-  image = image.copy()
-
-  # BGR to RGB
-  if bgr:
-    tmp = image[..., 0].copy()
-    image[..., 0] = image[..., 2]
-    image[..., 2] = tmp
-
-  # normalize
-  image = (image - image.mean()) / max(image.std(), 1e-4) * scale + 0.5
-  image = np.clip(image, 0, 1)
-
-  return image
-
 def show_image(image, scale=0.4, bgr=False, axis=False):
   """
   Preprocess and show an image.
@@ -308,7 +263,7 @@ def show_image(image, scale=0.4, bgr=False, axis=False):
   :return:            None.
   """
 
-  image = process_image(image, scale=scale, bgr=bgr)
+  image = model_utils.process_image(image, scale=scale, bgr=bgr)
 
   if not axis:
     plt.axis('off')
@@ -317,54 +272,6 @@ def show_image(image, scale=0.4, bgr=False, axis=False):
 
   plt.show()
 
-def save_image(image, path, scale=0.1, bgr=False, normalize=False, enumerate_image=False):
-  """
-  Preprocess and save an image.
-  :param image:               An image.
-  :param path:                Save path.
-  :param scale:               Scaling parameter.
-  :param bgr:                 Swap red and blue channels.
-  :param enumerate_image:     Path is a folder and an image should be assigned a number.
-  :return:                    None.
-  """
-
-  if enumerate_image:
-    if not os.path.isdir(path):
-      os.makedirs(path)
-
-    i = 0
-    while True:
-      image_path = os.path.join(path, "image{}.jpg".format(i))
-
-      if not os.path.isfile(image_path):
-        break
-      else:
-        i += 1
-  else:
-    image_path = path
-
-  if normalize:
-    image = process_image(image, scale=scale, bgr=not bgr)
-  else:
-    if not bgr:
-      c = image[..., 0].copy()
-      image[..., 0] = image[..., 2]
-      image[..., 2] = c
-
-  cv2.imwrite(image_path, (image * 255).astype(np.uint8))
-
-def save_images(images, path, bgr=False):
-
-  if not os.path.isdir(path):
-    os.makedirs(path)
-
-  if not bgr:
-    c = images[..., 0].copy()
-    images[..., 0] = images[..., 2]
-    images[..., 2] = c
-
-  for i in range(images.shape[0]):
-    cv2.imwrite(os.path.join(path, "{:d}.jpg".format(i)), (images[i] * 255).astype(np.uint8))
 
 def reset_optimizer(session, coeffs, opt_vars):
   """
@@ -428,11 +335,11 @@ def setup(size):
 
     image_t = spectrum_to_image(scaled_spectrum_t, size)
 
-    decorrelated_image_t = decorrelate_colors(image_t, color_correlation_svd_sqrt_rgb)
+    decorrelated_image_t = decorrelate_colors(image_t, COLOR_CORRELATION_SVD_SQRT_RGB)
 
     decorrelated_image_t = tf.nn.sigmoid(decorrelated_image_t)
 
-    input_t = (data_augmentation(decorrelated_image_t - means_rgb))
+    input_t = (data_augmentation(decorrelated_image_t - MEANS_RGB))
 
     channels = tf.unstack(input_t, axis=-1)
     input_t = tf.stack([channels[2], channels[1], channels[0]], axis=-1)

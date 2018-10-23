@@ -2,12 +2,14 @@
 source: https://github.com/tensorflow/tensorflow/blob/master/tensorflow/examples/tutorials/deepdream/deepdream.ipynb
 """
 
-import cv2
 import numpy as np
 import scipy.misc as misc
 import matplotlib.pyplot as plt
 import tensorflow as tf
 
+k = np.float32([1,4,6,4,1])
+k = np.outer(k, k)
+K5x5 = k[:,:,None,None]/k.sum()*np.eye(3, dtype=np.float32)
 
 def get_base_image(height=224, width=224, means=None):
   """
@@ -27,7 +29,11 @@ def get_base_image(height=224, width=224, means=None):
   return base_image
 
 def create_input_placeholder(means=None):
-
+  """
+  Creates input placeholder.
+  :param means:         Means to subtract from the image.
+  :return:              Input placeholder (one with reshaped for batches).
+  """
   input_pl = tf.placeholder(tf.float32, shape=(None, None, 3), name="input")
   input_t = tf.expand_dims(input_pl, axis=0)
 
@@ -41,6 +47,14 @@ def calc_grad_tiled(image, t_grad, session, image_pl, tile_size=512, is_training
   Compute the value of tensor t_grad over the image in a tiled way.
   Random shifts are applied to the image to blur tile boundaries over
   multiple iterations.
+  :param image:           Image as base.
+  :param t_grad:          Gradient to compute.
+  :param session:         Tensorflow session.
+  :param image_pl:        Input placeholder tensor.
+  :param tile_size:       Size of tile.
+  :param is_training_pl:  Is training placeholder used to determine if the network si being trained.
+  :return:                Computed gradient.
+
   """
 
   sz = tile_size
@@ -67,6 +81,25 @@ def calc_grad_tiled(image, t_grad, session, image_pl, tile_size=512, is_training
 
 def render_multiscale(objective, image_pl, session, resize_op, resize_image_pl, resize_shape_pl, iter_n=10, step=1.0,
                       octave_n=3, octave_scale=1.4, means=None, is_training_pl=None, base_image=None, width=224, height=224):
+  """
+  Render multiscale optimization for selected objective.
+  :param objective:       Objective to be optimized.
+  :param image_pl:        Input placeholder tensor.
+  :param session:         Tensorflow session.
+  :param resize_op:       Resize operation.
+  :param resize_image_pl: Resize operation input tensor.
+  :param resize_shape_pl: Resize operation shape input tensor.
+  :param iter_n:          Number of iterations.
+  :param step:            Size of step.
+  :param octave_n:        Number of octaves.
+  :param octave_scale:    Scale for octave.
+  :param means:           Means to be substracted from base image.
+  :param is_training_pl:  Is training placeholder.
+  :param base_image:      Base image to use (If none random image will be used).
+  :param width:           Width of generated image.
+  :param height:          Height of generated image.
+
+  """
 
   # compute a scalar value to optimize and derive its gradient
   score = tf.reduce_mean(objective)
@@ -102,15 +135,12 @@ def render_multiscale(objective, image_pl, session, resize_op, resize_image_pl, 
 
   return image
 
-k = np.float32([1,4,6,4,1])
-k = np.outer(k, k)
-k5x5 = k[:,:,None,None]/k.sum()*np.eye(3, dtype=np.float32)
 
 def lap_split(img):
     """ Split the image into lo and hi frequency components. """
     with tf.name_scope('split'):
-        lo = tf.nn.conv2d(img, k5x5, [1,2,2,1], 'SAME')
-        lo2 = tf.nn.conv2d_transpose(lo, k5x5*4, tf.shape(img), [1,2,2,1])
+        lo = tf.nn.conv2d(img, K5x5, [1,2,2,1], 'SAME')
+        lo2 = tf.nn.conv2d_transpose(lo, K5x5*4, tf.shape(img), [1,2,2,1])
         hi = img-lo2
     return lo, hi
 
@@ -128,7 +158,7 @@ def lap_merge(levels):
     img = levels[0]
     for hi in levels[1:]:
         with tf.name_scope('merge'):
-            img = tf.nn.conv2d_transpose(img, k5x5*4, tf.shape(hi), [1,2,2,1]) + hi
+            img = tf.nn.conv2d_transpose(img, K5x5*4, tf.shape(hi), [1,2,2,1]) + hi
     return img
 
 def normalize_std(img, eps=1e-10):
@@ -146,7 +176,11 @@ def lap_normalize(img, scale_n=4):
     return out[0,:,:,:]
 
 def setup_resize():
+  """
+  Setup resize operation.
+  :return:      Resize operation, Resize operation input tensor, Resize shape input tensor.
 
+  """
   resize_image_pl = tf.placeholder(tf.float32, shape=(None, None, 3), name="resize_image_pl")
   resize_shape_pl = tf.placeholder(tf.int32, shape=(2,), name="resize_shape_pl")
   resize_op = tf.image.resize_bilinear(tf.expand_dims(resize_image_pl, 0), resize_shape_pl)[0, ...]
@@ -154,6 +188,12 @@ def setup_resize():
   return resize_op, resize_image_pl, resize_shape_pl
 
 def setup_lapnorm(scale_n=4):
+  """
+  Setup laplace normalization.
+  :param scale_n:       Number of scales.
+  :return:              Laplace output, Laplace input tensor.
+
+  """
 
   lapnorm_pl = tf.placeholder(tf.float32, shape=(None, None, 3), name="lapnorm_pl")
   lapnorm = lap_normalize(lapnorm_pl, scale_n=scale_n)
@@ -163,6 +203,28 @@ def setup_lapnorm(scale_n=4):
 def render_lapnorm(objective, session, image_pl, lap_norm, lap_norm_pl, resize_op, resize_image_pl,
                    resize_shape_pl, iter_n=10, step=1.0, octave_n=3, octave_scale=1.4, means=None,
                    is_training_pl=None, base_image=None, width=224, height=224):
+  """
+  Render laplace normalization for selected objective.
+  :param objective:       Objective to be optimized.
+  :param session:         Tensorflow session.
+  :param image_pl:        Input placeholder tensor.
+  :param lap_norm:        Laplace normalization output.
+  :param lap_norm_pl:     Laplace normalization input tensor.
+  :param resize_op:       Resize operation.
+  :param resize_image_pl: Resize operation input tensor.
+  :param resize_shape_pl: Resize operation shape input tensor.
+  :param iter_n:          Number of iterations.
+  :param step:            Size of step.
+  :param octave_n:        Number of octaves.
+  :param octave_scale:    Scale for octave.
+  :param means:           Means to be substracted from base image.
+  :param is_training_pl:  Is training placeholder.
+  :param base_image:      Base image to use (If none random image will be used).
+  :param width:           Width of generated image.
+  :param height:          Height of generated image.
+  :return:                Generated image.
+
+  """
 
   score = tf.reduce_mean(objective)
   gradient = tf.gradients(score, image_pl)[0]
@@ -201,6 +263,17 @@ def render_lapnorm(objective, session, image_pl, lap_norm, lap_norm_pl, resize_o
   return image
 
 def resize(image, size, resize_image_pl, resize_shape_pl, resize_op, session):
+  """
+  Performs resizing of image.
+  :param image:           Image to resize.
+  :param size:            Size of resized image.
+  :param resize_image_pl: Resize operation input tensor.
+  :param resize_shape_pl: Resize operation shape input tensor.
+  :param resize_op:       Resize operation.
+  :param session:         Tensorflow session.
+  :return:                Resized image.
+
+  """
   feed_dict = {
     resize_image_pl: image,
     resize_shape_pl: size,
@@ -210,6 +283,21 @@ def resize(image, size, resize_image_pl, resize_shape_pl, resize_op, session):
 
 def render_deepdream(objective, session, image_pl, img0, resize_op, resize_image_pl, resize_shape_pl,
                     iter_n=10, step=1.5, octave_n=4, octave_scale=1.4):
+  """
+  Renders deep dream image.
+  :param objective:       Objective to be optimized.
+  :param session:         Tensorflow session.
+  :param image_pl:        Input placeholder tensor.
+  :param img0:            Base image to use.
+  :param resize_op:       Resize operation.
+  :param resize_image_pl: Resize operation input tensor.
+  :param resize_shape_pl: Resize operation shape input tensor.
+  :param iter_n:          Number of iterations.
+  :param step:            Size of step.
+  :return:                Generated image.
+
+  """
+
   t_score = tf.reduce_mean(objective)
   t_grad = tf.gradients(t_score, image_pl)[0]
 
@@ -236,26 +324,13 @@ def render_deepdream(objective, session, image_pl, img0, resize_op, resize_image
   return img
 
 
-def normalize_image(image, s=0.1):
-  """ Normalize the image range for visualization. """
-  new_image = image / 255
-  return (new_image - new_image.mean()) / max(new_image.std(), 1e-4) * s + 0.5
+def show_image(image, axis=False):
+  """
+  Shows image using matplotlib.
+  :param image:      Image to be displayed.
+  :param axis:       Display axis.
 
-def save_image(filename, image):
-
-  image = np.clip(image, 0, 1)
-  image *= 255
-
-  cv2.imwrite(filename, image)
-
-def show_image(image, verbose=False, axis=False):
-
-  if verbose:
-    print("output statistics:")
-    print("mean:", np.mean(image))
-    print("max: ", np.max(image))
-    print("min: ", np.min(image))
-
+  """
   image = np.clip(image, 0, 1)
 
   plt.imshow(image)
@@ -266,7 +341,22 @@ def show_image(image, verbose=False, axis=False):
 def render_image_lapnorm(objective, session, image_pl,
                    iter_n=10, step=1.0, octave_n=3, octave_scale=1.4, means=None,
                    is_training_pl=None, base_image=None):
-  
+  """
+  Render laplace normalization for selected objective.
+  :param objective:       Objective to be optimized.
+  :param session:         Tensorflow session.
+  :param image_pl:        Input placeholder tensor.
+  :param iter_n:          Number of iterations.
+  :param step:            Size of step.
+  :param octave_n:        Number of octaves.
+  :param octave_scale:    Scale for octave.
+  :param means:           Means to be substracted from base image.
+  :param is_training_pl:  Is training placeholder.
+  :param base_image:      Base image to use (If none random image will be used).
+  :return:                Generated image.
+
+  """
+
   lapnorm, lapnorm_pl = setup_lapnorm()
   resize_op, resize_image_pl, resize_shape_pl = setup_resize()
 
@@ -276,6 +366,21 @@ def render_image_lapnorm(objective, session, image_pl,
 
 def render_image_multiscale(objective, session, image_pl, iter_n=10, step=1.0,
                       octave_n=3, octave_scale=1.4, means=None, is_training_pl=None, base_image=None):
+  """
+  Render multiscale optimization for selected objective.
+  :param objective:       Objective to be optimized.
+  :param session:         Tensorflow session.
+  :param image_pl:        Input placeholder tensor.
+  :param iter_n:          Number of iterations.
+  :param step:            Size of step.
+  :param octave_n:        Number of octaves.
+  :param octave_scale:    Scale for octave.
+  :param means:           Means to be substracted from base image.
+  :param is_training_pl:  Is training placeholder.
+  :param base_image:      Base image to use (If none random image will be used).
+  :return:                Generated image.
+
+  """
 
   resize_op, resize_image_pl, resize_shape_pl = setup_resize()
 
@@ -284,10 +389,31 @@ def render_image_multiscale(objective, session, image_pl, iter_n=10, step=1.0,
 
 def render_image_deepdream(objective, session, image_pl, base_image,
                     iter_n=10, step=1.5, octave_n=4, octave_scale=1.4):
+  """
+  Render deep dream image for selected objective.
+  :param objective:       Objective to be optimized.
+  :param session:         Tensorflow session.
+  :param image_pl:        Input placeholder tensor.
+  :param base_image:      Base image to use.
+  :param iter_n:          Number of iterations.
+  :param step:            Size of step.
+  :param octave_n:        Number of octaves.
+  :param octave_scale:    Scale for octave.
+  :return:                Generated image.
+
+  """
+
   resize_op, resize_image_pl, resize_shape_pl = setup_resize()
   
   return render_deepdream(objective, session, image_pl, base_image, resize_op, resize_image_pl, resize_shape_pl, iter_n, step, octave_n, octave_scale) 
 
 
 def setup(means=None):
+  """
+  Creates input placeholder.
+  :param means:           Means to be substracted from base image.
+  :return:                Input placeholder.
+
+  """
+
   return create_input_placeholder(means)
