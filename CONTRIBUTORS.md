@@ -1,4 +1,4 @@
-Ondřej Bíža - @ondrejba
-Antonín Říha - @anriha
-Jan Pipek - @janpipek
-Tomáš Drvoštěp - @Drvi 
+- Ondřej Bíža - https://github.com/ondrejba
+- Antonín Říha - https://github.com/anriha
+- Jan Pipek - https://github.com/janpipek
+- Tomáš Drvoštěp - https://github.com/Drvi 
