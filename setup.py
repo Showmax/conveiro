@@ -9,8 +9,8 @@ with codecs.open(os.path.join(os.path.dirname(__file__), 'README.md'), 'r', enco
 
 
 setup(
-    author='',
-    author_email='',
+    author='The ShowmaxLab & Showmax teams',
+    author_email='oss+conveiro@showmax.com',
     classifiers=[
         "Development Status :: 3 - Alpha",
         'Intended Audience :: Developers',
@@ -37,5 +37,5 @@ setup(
     python_requires = "~=3.4",
     platforms=['any'],
     version=__version__,
-    url='https://github.com/ShowMax/conveiro',
+    url='https://github.com/showmax/conveiro',
 )
