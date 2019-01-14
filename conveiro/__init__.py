@@ -8,4 +8,4 @@ It implements multiple techniques for visualization,
 such as laplace, multiscale, deep dream and CDFS.
 """
 
-__version__ = '0.1'
+__version__ = '0.1.1'
