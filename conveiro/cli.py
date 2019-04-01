@@ -22,11 +22,16 @@ def available_nets():
 @click.option("-t", "--tensor", help="Tensor to display.")
 @click.option("-i", "--input-image", help="If present, source image for hallucination.")
 @click.option("-o", "--output-image", help="Path to write the image to (otherwise just show in a new window).")
-def render(algorithm, tensor, network, input_image, output_image):
+@click.option("--cdfs-steps", type=int, default=128, help="Number of steps for CDFS algorithm (default=128).")
+@click.option("--learning-rate", type=float, default=0.01, help="Learning rate for CDFS algorithm (default=0.01).")
+def render(algorithm, tensor, network, input_image, output_image, **kwargs):
     """Hallucinate an image for a layer / neuron.
     
-    Example:
-        conveiro render -n Inception1 -t "inception1/block4c/concat:0"
+    Examples:
+
+    \b
+      conveiro render -n Inception1 -t "inception1/block4c/concat:0" -i docs/mountain.jpeg -o mountain-out.jpg
+      conveiro render -a cdfs -n Inception1 -t "inception1/block3b/concat:0"
     """
     print("Loading tensorflow...")
     import tensorflow as tf
@@ -66,6 +71,35 @@ def render(algorithm, tensor, network, input_image, output_image):
             deep_dream.save_image(result, output_image)
         else:
             deep_dream.show_image(result)
+
+    elif algorithm == "cdfs":
+        # TODO: Unify with the deep dream branch
+        from conveiro import cdfs
+        input_t, decorrelated_image_t, coeffs_t = cdfs.setup(224)
+
+        print(f"Creating model {network}...")
+        model = constructor(input_t)
+        graph = tf.get_default_graph()
+        session = tf.Session()
+        session.run(model.pretrained())
+
+        objective = graph.get_tensor_by_name(tensor)
+
+        if input_image:
+            print("Input for CDFS not implemented yet.")
+            exit(-1)
+        else:
+            # TODO: Generalize
+            image = cdfs.render_image(session, decorrelated_image_t, coeffs_t, objective[..., 55],
+                                      learning_rate=kwargs["learning_rate"],
+                                      num_steps=kwargs["cdfs_steps"])
+            result = utils.process_image(image)
+        
+        if output_image:
+            print("Output for CDFS not implemented yet.")
+            exit(-1)
+        else:
+            cdfs.show_image(result)
 
 
 @run_app.command()
