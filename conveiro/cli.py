@@ -1,3 +1,5 @@
+import re
+
 import click
 
 
@@ -109,4 +111,44 @@ def nets():
     print("Available network architectures:")
     for candidate in available_nets():
         print(" ", candidate)
+
+
+@run_app.command()
+@click.argument("network")
+@click.option("-t", "--type", help="Operation type to filter")
+@click.option("-n", "--name", help="Regular expression for operation name to search for")
+def tensors(network, type, name):
+    """List available tensors in a network.
+    
+    Examples:
+
+    \b
+      conveiro tensors Inception1
+      conveiro tensors Inception1 -t Conv2D -n block5b
+    """
+    import tensorflow as tf
+    import tensornets as nets
+    from conveiro import deep_dream
+
+    if network in available_nets():
+        constructor = getattr(nets, network)
+    else:
+        print(f"Network {network} not available.")
+        exit(-1)
+
+    input_pl, input_t = deep_dream.setup()
+    model = constructor(input_t)
+    graph = tf.get_default_graph()
+    ops = graph.get_operations()
+    if name:
+        ops = [op for op in ops if re.search(name, op.name)]
+    if type:
+        ops = [op for op in ops if op.type == type]
+    for m in ops:
+        try:
+            shape = m.get_attr("shape")
+            print(m.name, m.type, shape.size)
+        except:
+            print(m.name, m.type)
+
 
