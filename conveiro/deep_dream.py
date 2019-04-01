@@ -408,6 +408,20 @@ def render_image_deepdream(objective, session, image_pl, base_image,
   return render_deepdream(objective, session, image_pl, base_image, resize_op, resize_image_pl, resize_shape_pl, iter_n, step, octave_n, octave_scale) 
 
 
+
+def save_image(image, path):
+  """Save image.
+
+  :param image: Image to be saved (as n x m x 3 numpy array).
+  :param path: Where to store the image.
+
+  Note: Requires PIL (or pillow).
+  """
+  from PIL import Image
+  im = Image.fromarray(image.astype(np.uint8), mode="RGB")
+  im.save(path)
+
+
 def setup(means=None):
   """
   Creates input placeholder.

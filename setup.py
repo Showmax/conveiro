@@ -26,7 +26,13 @@ setup(
     extras_require = {
         'gpu' : ['tensorflow-gpu'],
         'cpu' : ['tensorflow'],
-        'examples' : ['tensornets']
+        'examples' : ['tensornets'],
+        'cli': ['tensornets', 'click']
+    },
+    entry_points = {
+        'console_scripts': [
+            'conveiro = conveiro.cli:run_app'
+        ]
     },
     keywords=['CNN', 'neural networks', 'deep dream', 'visualization'],
     license='Apache License, Version 2.0',
