@@ -54,3 +54,26 @@ def process_image(image, scale=0.1, bgr=False):
   image = np.clip(image, 0, 1)
 
   return image
+
+def create_graph(model_constructor):
+  """Create a graphviz graph of a network.
+  
+  :param constructor: Constructor that takes input placeholder.
+  """
+  from graphviz import Digraph
+
+  input_pl = tf.placeholder(tf.float32, shape=(None, None, 3), name="input")
+  input_t = tf.expand_dims(input_pl, axis=0)
+
+  model = model_constructor(input_t)
+  graph = tf.get_default_graph()
+
+  # Inspired by https://blog.jakuba.net/2017/05/30/Visualizing-TensorFlow-Graphs-in-Jupyter-Notebooks/
+  dot = Digraph()
+  for n in graph.as_graph_def().node:
+      dot.node(n.name, label=n.name)
+      for i in n.input:
+          # Edges are determined by the names of the nodes
+          dot.edge(i, n.name)
+
+  return dot
