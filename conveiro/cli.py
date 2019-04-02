@@ -22,14 +22,15 @@ def available_nets():
 @click.option("-a", "--algorithm", default="deep-dream", type=click.Choice(["deep-dream", "cdfs"]))
 @click.option("-n", "--network", help="Architecture of the neural network")
 @click.option("-t", "--tensor", help="Tensor to display.")
-@click.option("-s", "--slice", help="Use only one slice of the layer.", type=int, required=False)
+@click.option("-s", "--slice", help="Use only one slice of the tensor.", type=int, required=False)
+@click.option("-c", "--contrast", help="Contrast for the resulting image", type=float, default=0.3)
 @click.option("-r", "--resolution", help="Number of pixels along one dimension (applicable only without input image).", type=int, default=224)
 @click.option("-i", "--input-image", help="If present, source image for hallucination.")
 @click.option("-o", "--output-image", help="Path to write the image to (otherwise just show in a new window).")
 @click.option("-v", "--verbose", is_flag=True, help="Produce verbose output.")
 @click.option("--cdfs-steps", type=int, default=128, help="Number of steps for CDFS algorithm (default=128).")
 @click.option("--learning-rate", type=float, default=0.01, help="Learning rate for CDFS algorithm (default=0.01).")
-def render(algorithm, tensor, network, input_image, output_image, slice, verbose, resolution, **kwargs):
+def render(algorithm, tensor, network, input_image, output_image, contrast, slice, verbose, resolution, **kwargs):
     """Hallucinate an image for a layer / neuron.
     
     Examples:
@@ -47,77 +48,59 @@ def render(algorithm, tensor, network, input_image, output_image, slice, verbose
     import matplotlib.pyplot as plt
     from conveiro import utils
 
+    # Get network
     if network in available_nets():
         constructor = getattr(nets, network)
     else:
         print(f"Network {network} not available. Run `conveiro networks` to display valid options.")
         exit(-1)
 
+    # Set up algorithm
+    if verbose:
+            print("Loading {0}...".format(algorithm))
     if algorithm == "deep-dream":
-        if verbose:
-            print("Loading deep dream...")
         from conveiro import deep_dream
         input_pl, input_t = deep_dream.setup()
+    elif algorithm == "cdfs":
+        from conveiro import cdfs
+        input_t, decorrelated_image_t, coeffs_t = cdfs.setup(resolution)
 
-        if verbose:
-            print(f"Creating model {network}...")
-        model = constructor(input_t)
-        graph = tf.get_default_graph()
-        session = tf.Session()
-        session.run(model.pretrained())
-
-        objective = graph.get_tensor_by_name(tensor)
-        if slice is not None:
-            objective = objective[..., slice]
+    # Get model and objective
+    if verbose:
+        print(f"Creating model {network}...")
+    model = constructor(input_t)
+    graph = tf.get_default_graph()
+    session = tf.Session()
+    session.run(model.pretrained())
+    objective = graph.get_tensor_by_name(tensor)
+    if slice is not None:
+        objective = objective[..., slice]
         
+    # Render the image
+    if algorithm == "deep-dream":
         if input_image:
             base_image = plt.imread(input_image)
         else:
             base_image = deep_dream.get_base_image(resolution, resolution)
         image = deep_dream.render_image_deepdream(objective, session, input_pl, base_image=base_image)
-        result = utils.process_image(image)
-        # else:
-        #     # TODO: Add laplace
-        #     result = deep_dream.render_image_multiscale(objective, session, input_pl) / 255     
-
-        if output_image:
-            deep_dream.save_image(result, output_image)
-        else:
-            deep_dream.show_image(result)
-
+        result = utils.normalize_image(image, contrast=contrast)
+            
     elif algorithm == "cdfs":
-        # TODO: Unify with the deep dream branch
-        if verbose:
-            print("Loading CDFS...")
-        from conveiro import cdfs
-        input_t, decorrelated_image_t, coeffs_t = cdfs.setup(resolution)
-
-        if verbose:
-            print(f"Creating model {network}...")
-        model = constructor(input_t)
-        graph = tf.get_default_graph()
-        session = tf.Session()
-        session.run(model.pretrained())
-
-        objective = graph.get_tensor_by_name(tensor)
-        if slice is not None:
-            objective = objective[..., slice]
-
         if input_image:
-            print("Input for CDFS not implemented yet.")
+            print("Input for CDFS not implemented.")
             exit(-1)
         else:
-            # TODO: Generalize
             image = cdfs.render_image(session, decorrelated_image_t, coeffs_t,
                                       objective=objective,
                                       learning_rate=kwargs["learning_rate"],
                                       num_steps=kwargs["cdfs_steps"])
-            result = utils.process_image(image)
-        
-        if output_image:
-            cdfs.save_image(image, output_image)
-        else:
-            cdfs.show_image(result)
+            result = utils.normalize_image(image, contrast=contrast)
+   
+    # Output (show or save)    
+    if output_image:
+        utils.save_image(result, output_image)
+    else:
+        utils.show_image(result)
 
 
 @run_app.command()
