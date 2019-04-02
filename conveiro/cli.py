@@ -22,11 +22,12 @@ def available_nets():
 @click.option("-a", "--algorithm", default="deep-dream", type=click.Choice(["deep-dream", "cdfs"]))
 @click.option("-n", "--network", help="Architecture of the neural network")
 @click.option("-t", "--tensor", help="Tensor to display.")
+@click.option("-s", "--slice", help="Use only one slice of the layer.", type=int, required=False)
 @click.option("-i", "--input-image", help="If present, source image for hallucination.")
 @click.option("-o", "--output-image", help="Path to write the image to (otherwise just show in a new window).")
 @click.option("--cdfs-steps", type=int, default=128, help="Number of steps for CDFS algorithm (default=128).")
 @click.option("--learning-rate", type=float, default=0.01, help="Learning rate for CDFS algorithm (default=0.01).")
-def render(algorithm, tensor, network, input_image, output_image, **kwargs):
+def render(algorithm, tensor, network, input_image, output_image, slice, **kwargs):
     """Hallucinate an image for a layer / neuron.
     
     Examples:
@@ -60,6 +61,8 @@ def render(algorithm, tensor, network, input_image, output_image, **kwargs):
         session.run(model.pretrained())
 
         objective = graph.get_tensor_by_name(tensor)
+        if slice is not None:
+            objective = objective[..., slice]
         
         if input_image:
             base_image = plt.imread(input_image)   
@@ -67,7 +70,7 @@ def render(algorithm, tensor, network, input_image, output_image, **kwargs):
             result = utils.process_image(image)
         else:
             # TODO: Add laplace
-            result = deep_dream.render_image_multiscale(objective[..., 10], session, input_pl) / 255     
+            result = deep_dream.render_image_multiscale(objective, session, input_pl) / 255     
 
         if output_image:
             deep_dream.save_image(result, output_image)
@@ -86,6 +89,8 @@ def render(algorithm, tensor, network, input_image, output_image, **kwargs):
         session.run(model.pretrained())
 
         objective = graph.get_tensor_by_name(tensor)
+        if slice is not None:
+            objective = objective[..., slice]
 
         if input_image:
             print("Input for CDFS not implemented yet.")
@@ -93,7 +98,7 @@ def render(algorithm, tensor, network, input_image, output_image, **kwargs):
         else:
             # TODO: Generalize
             image = cdfs.render_image(session, decorrelated_image_t, coeffs_t,
-                                      objective=objective[..., 55],
+                                      objective=objective,
                                       learning_rate=kwargs["learning_rate"],
                                       num_steps=kwargs["cdfs_steps"])
             result = utils.process_image(image)
