@@ -92,7 +92,8 @@ def render(algorithm, tensor, network, input_image, output_image, **kwargs):
             exit(-1)
         else:
             # TODO: Generalize
-            image = cdfs.render_image(session, decorrelated_image_t, coeffs_t, objective[..., 55],
+            image = cdfs.render_image(session, decorrelated_image_t, coeffs_t,
+                                      objective=objective[..., 55],
                                       learning_rate=kwargs["learning_rate"],
                                       num_steps=kwargs["cdfs_steps"])
             result = utils.process_image(image)
@@ -105,7 +106,7 @@ def render(algorithm, tensor, network, input_image, output_image, **kwargs):
 
 @run_app.command()
 def nets():
-    """List available network architectures.
+    """List available network architectures (from tensornets).
     
     Note that not all architectures and not all tensors
     can be visualized.
@@ -134,7 +135,6 @@ def tensors(network, type, name):
     """
     import tensorflow as tf
     import tensornets as nets
-    from conveiro import deep_dream
 
     if network in available_nets():
         constructor = getattr(nets, network)
@@ -142,7 +142,9 @@ def tensors(network, type, name):
         print(f"Network {network} not available.")
         exit(-1)
 
-    input_pl, input_t = deep_dream.setup()
+    input_pl = tf.placeholder(tf.float32, shape=(None, None, 3), name="input")
+    input_t = tf.expand_dims(input_pl, axis=0)
+
     model = constructor(input_t)
     graph = tf.get_default_graph()
     ops = graph.get_operations()
@@ -158,3 +160,24 @@ def tensors(network, type, name):
             print(m.name, m.type)
 
 
+@run_app.command()
+@click.argument("network")
+@click.option("-o", "--output-path", help="Path to write the graph to (in dot format).")
+def graph(network, output_path):
+    """Create a graph of the network architecture."""
+    import tensorflow as tf
+    import tensornets as nets
+    from conveiro import utils
+
+    if network in available_nets():
+        constructor = getattr(nets, network)
+    else:
+        print(f"Network {network} not available.")
+        exit(-1)
+
+    dot = utils.create_graph(constructor)
+
+    if not output_path:
+        dot.view()
+    else:
+        dot.save(output_path)
