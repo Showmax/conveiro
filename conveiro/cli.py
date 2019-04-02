@@ -25,9 +25,10 @@ def available_nets():
 @click.option("-s", "--slice", help="Use only one slice of the layer.", type=int, required=False)
 @click.option("-i", "--input-image", help="If present, source image for hallucination.")
 @click.option("-o", "--output-image", help="Path to write the image to (otherwise just show in a new window).")
+@click.option("-v", "--verbose", is_flag=True, help="Produce verbose output.")
 @click.option("--cdfs-steps", type=int, default=128, help="Number of steps for CDFS algorithm (default=128).")
 @click.option("--learning-rate", type=float, default=0.01, help="Learning rate for CDFS algorithm (default=0.01).")
-def render(algorithm, tensor, network, input_image, output_image, slice, **kwargs):
+def render(algorithm, tensor, network, input_image, output_image, slice, verbose, **kwargs):
     """Hallucinate an image for a layer / neuron.
     
     Examples:
@@ -36,9 +37,11 @@ def render(algorithm, tensor, network, input_image, output_image, slice, **kwarg
       conveiro render -n Inception1 -t "inception1/block4c/concat:0" -i docs/mountain.jpeg -o mountain-out.jpg
       conveiro render -a cdfs -n Inception1 -t "inception1/block3b/concat:0"
     """
-    print("Loading tensorflow...")
+    if verbose:
+        print("Loading tensorflow...")
     import tensorflow as tf
-    print("Loading tensornets...")
+    if verbose:
+        print("Loading tensornets...")
     import tensornets as nets
     import matplotlib.pyplot as plt
     from conveiro import utils
@@ -46,15 +49,17 @@ def render(algorithm, tensor, network, input_image, output_image, slice, **kwarg
     if network in available_nets():
         constructor = getattr(nets, network)
     else:
-        print(f"Network {network} not available.")
+        print(f"Network {network} not available. Run `conveiro networks` to display valid options.")
         exit(-1)
 
     if algorithm == "deep-dream":
-        print("Loading deep dream...")
+        if verbose:
+            print("Loading deep dream...")
         from conveiro import deep_dream
         input_pl, input_t = deep_dream.setup()
 
-        print(f"Creating model {network}...")
+        if verbose:
+            print(f"Creating model {network}...")
         model = constructor(input_t)
         graph = tf.get_default_graph()
         session = tf.Session()
@@ -79,10 +84,13 @@ def render(algorithm, tensor, network, input_image, output_image, slice, **kwarg
 
     elif algorithm == "cdfs":
         # TODO: Unify with the deep dream branch
+        if verbose:
+            print("Loading CDFS...")
         from conveiro import cdfs
         input_t, decorrelated_image_t, coeffs_t = cdfs.setup(224)
 
-        print(f"Creating model {network}...")
+        if verbose:
+            print(f"Creating model {network}...")
         model = constructor(input_t)
         graph = tf.get_default_graph()
         session = tf.Session()
