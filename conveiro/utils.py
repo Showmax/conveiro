@@ -1,5 +1,9 @@
 import tensorflow as tf
 import numpy as np
+import matplotlib.pyplot as plt
+
+
+DEFAULT_CONTRAST = 0.3
 
 def rank(tensor):
   """
@@ -32,28 +36,51 @@ def roll_2d(tensor, pixels_x, pixels_y):
 
   return tensor
 
-def process_image(image, scale=0.1, bgr=False):
-  """
-  Normalize image and maybe swap channels.
-  :param image:     An image.
-  :param scale:     Scaling parameter.
-  :param bgr:       Swap red and blue channels.
-  :return:          Normalized image
-  """
-
+def bgr_to_rgb(image):
+  """Swap blue and red channel in an image."""
   image = image.copy()
-
-  # BGR to RGB
-  if bgr:
-    tmp = image[..., 0].copy()
-    image[..., 0] = image[..., 2]
-    image[..., 2] = tmp
-
-  # normalize
-  image = (image - image.mean()) / max(image.std(), 1e-4) * scale + 0.5
-  image = np.clip(image, 0, 1)
-
+  tmp = image[..., 0].copy()
+  image[..., 0] = image[..., 2]
+  image[..., 2] = tmp
   return image
+
+def normalize_image(image, contrast=DEFAULT_CONTRAST):
+  """Normalize the image using mean and std dev.
+
+  :param image:     An image.
+  :param contrast:  Multiplication factor for the distance from mean.
+  :return:          Normalized image (as numbers 0 to 1)
+
+  Note: The larger the `contrast`, the more visible features in the image and the 
+  larger areas of the image will be clipped to 0 or 1.
+  """
+  image = (image - image.mean()) / max(image.std(), 1e-4) * contrast + 0.5
+  image = np.clip(image, 0, 1)
+  return image
+
+def save_image(image, path):
+  """Save image.
+
+  :param image: Image to be saved (as n x m x 3 numpy array) in range 0.0 to 1.0
+  :param path: Where to store the image.
+
+  Note: Requires PIL (or pillow).
+  """
+  from PIL import Image
+  im = Image.fromarray((image * (255)).astype(np.uint8), mode="RGB")
+  im.save(path)
+
+def show_image(image, axis=None):
+  """ Show an image.
+
+  :param image:       An image.
+  :param axis:        Matplotlib axis where to
+  :return:            None.
+  """
+  if not axis:
+    plt.axis('off')
+  plt.imshow(image)
+  plt.show()
 
 def create_graph(model_constructor):
   """Create a graphviz graph of a network.
