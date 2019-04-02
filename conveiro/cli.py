@@ -158,11 +158,8 @@ def tensors(network, type, name):
     if type:
         ops = [op for op in ops if op.type == type]
     for m in ops:
-        try:
-            shape = m.get_attr("shape")
-            print(m.name, m.type, shape.size)
-        except:
-            print(m.name, m.type)
+        for tensor in m.outputs:
+            print(tensor.name, m.type, tensor.shape.as_list())
 
 
 @run_app.command()
