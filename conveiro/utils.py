@@ -58,7 +58,8 @@ def process_image(image, scale=0.1, bgr=False):
 def create_graph(model_constructor):
   """Create a graphviz graph of a network.
   
-  :param constructor: Constructor that takes input placeholder.
+  :param model_constructor: Constructor that takes input placeholder.
+  :return: The dot graph
   """
   from graphviz import Digraph
 
