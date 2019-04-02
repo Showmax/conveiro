@@ -2,4 +2,8 @@ scipy
 numpy
 matplotlib
 tensorflow
+tensornets
+pillow
+click
+graphviz
 # tensornets for examples

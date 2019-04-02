@@ -36,6 +36,7 @@ There are few more steps but this is the essence of this technique.
 * Tensorflow (CPU or GPU variant)
 * Numpy
 * Matplotlib
+* click, tensornets, pillow, graphviz (if you want to use the command-line tool with examples)
 
 ## Installation
 
@@ -48,6 +49,24 @@ Development version
 ```
 pip install -e .    # from cloned repository
 ```
+
+## Command-line usage
+
+This library comes with a command-line tool called `conveiro`
+that can visualize and hallucinate networks from `tensornets` library.
+
+```
+Usage: conveiro COMMAND [OPTIONS] [ARGS]...
+
+Commands:
+  graph    Create a graph of the network architecture.
+  nets     List available network architectures (from tensornets).
+  render   Hallucinate an image for a layer / neuron.
+  tensors  List available tensors in a network.
+```
+
+Run `conveiro --help` or `conveiro [command-name] --help` to 
+show the list of capabilities and options.
 
 ## Examples
 

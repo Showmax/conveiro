@@ -22,12 +22,12 @@ setup(
     ],
     description='Visualization of filters in convolutional neural networks',
     include_package_data=True,
-    install_requires=['numpy', 'matplotlib', 'scipy'],
+    install_requires=['numpy', 'matplotlib', 'scipy', 'pillow'],
     extras_require = {
         'gpu' : ['tensorflow-gpu'],
         'cpu' : ['tensorflow'],
         'examples' : ['tensornets'],
-        'cli': ['tensornets', 'click']
+        'cli': ['tensornets', 'click', 'graphviz']
     },
     entry_points = {
         'console_scripts': [
