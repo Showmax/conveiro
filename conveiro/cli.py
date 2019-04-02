@@ -62,11 +62,11 @@ def render(algorithm, tensor, network, input_image, output_image, **kwargs):
         objective = graph.get_tensor_by_name(tensor)
         
         if input_image:
-            base_image = plt.imread(input_image)
-            # TODO: Add laplace
+            base_image = plt.imread(input_image)   
             image = deep_dream.render_image_deepdream(objective, session, input_pl, base_image)
             result = utils.process_image(image)
         else:
+            # TODO: Add laplace
             result = deep_dream.render_image_multiscale(objective[..., 10], session, input_pl) / 255     
 
         if output_image:
@@ -98,15 +98,18 @@ def render(algorithm, tensor, network, input_image, output_image, **kwargs):
             result = utils.process_image(image)
         
         if output_image:
-            print("Output for CDFS not implemented yet.")
-            exit(-1)
+            cdfs.save_image(image, output_image)
         else:
             cdfs.show_image(result)
 
 
 @run_app.command()
 def nets():
-    """List available network architectures."""
+    """List available network architectures.
+    
+    Note that not all architectures and not all tensors
+    can be visualized.
+    """
     import tensornets as nets
     print("Available network architectures:")
     for candidate in available_nets():
@@ -125,6 +128,9 @@ def tensors(network, type, name):
     \b
       conveiro tensors Inception1
       conveiro tensors Inception1 -t Conv2D -n block5b
+
+    Note that not all architectures and not all tensors
+    can be visualized.
     """
     import tensorflow as tf
     import tensornets as nets

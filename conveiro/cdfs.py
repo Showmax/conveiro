@@ -273,6 +273,20 @@ def show_image(image, scale=0.4, bgr=False, axis=False):
   plt.show()
 
 
+def save_image(image, path, scale=0.4, bgr=False):
+  """Save image.
+
+  :param image: Image to be saved (as n x m x 3 numpy array).
+  :param path: Where to store the image.
+
+  Note: Requires PIL (or pillow).
+  """
+  from PIL import Image
+  image = model_utils.process_image(image, scale=scale, bgr=bgr)
+  im = Image.fromarray((image * 256).astype(np.uint8), mode="RGB")
+  im.save(path)
+
+
 def reset_optimizer(session, coeffs, opt_vars):
   """
   Reset the optimizer and the image parameters.
