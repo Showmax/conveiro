@@ -4,14 +4,17 @@ source: https://github.com/tensorflow/tensorflow/blob/master/tensorflow/examples
 
 import numpy as np
 import scipy.misc as misc
-import matplotlib.pyplot as plt
 import tensorflow as tf
+import matplotlib.pyplot as plt
+
+
+DEFAULT_IMAGE_SIZE = 224
 
 k = np.float32([1,4,6,4,1])
 k = np.outer(k, k)
 K5x5 = k[:,:,None,None]/k.sum()*np.eye(3, dtype=np.float32)
 
-def get_base_image(height=224, width=224, means=None):
+def get_base_image(height=DEFAULT_IMAGE_SIZE, width=DEFAULT_IMAGE_SIZE, means=None):
   """
   Get base image for filter visualization. Gray image with gaussian noise.
   :param height:        Height of the base image.
@@ -80,7 +83,8 @@ def calc_grad_tiled(image, t_grad, session, image_pl, tile_size=512, is_training
   return np.roll(np.roll(grad, -sx, 1), -sy, 0)
 
 def render_multiscale(objective, image_pl, session, resize_op, resize_image_pl, resize_shape_pl, iter_n=10, step=1.0,
-                      octave_n=3, octave_scale=1.4, means=None, is_training_pl=None, base_image=None, width=224, height=224):
+                      octave_n=3, octave_scale=1.4, means=None, is_training_pl=None, base_image=None,
+                      width=DEFAULT_IMAGE_SIZE, height=DEFAULT_IMAGE_SIZE):
   """
   Render multiscale optimization for selected objective.
   :param objective:       Objective to be optimized.
@@ -202,7 +206,7 @@ def setup_lapnorm(scale_n=4):
 
 def render_lapnorm(objective, session, image_pl, lap_norm, lap_norm_pl, resize_op, resize_image_pl,
                    resize_shape_pl, iter_n=10, step=1.0, octave_n=3, octave_scale=1.4, means=None,
-                   is_training_pl=None, base_image=None, width=224, height=224):
+                   is_training_pl=None, base_image=None, width=DEFAULT_IMAGE_SIZE, height=DEFAULT_IMAGE_SIZE):
   """
   Render laplace normalization for selected objective.
   :param objective:       Objective to be optimized.
