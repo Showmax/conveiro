@@ -23,12 +23,13 @@ def available_nets():
 @click.option("-n", "--network", help="Architecture of the neural network")
 @click.option("-t", "--tensor", help="Tensor to display.")
 @click.option("-s", "--slice", help="Use only one slice of the layer.", type=int, required=False)
+@click.option("-r", "--resolution", help="Number of pixels along one dimension (applicable only without input image).", type=int, default=224)
 @click.option("-i", "--input-image", help="If present, source image for hallucination.")
 @click.option("-o", "--output-image", help="Path to write the image to (otherwise just show in a new window).")
 @click.option("-v", "--verbose", is_flag=True, help="Produce verbose output.")
 @click.option("--cdfs-steps", type=int, default=128, help="Number of steps for CDFS algorithm (default=128).")
 @click.option("--learning-rate", type=float, default=0.01, help="Learning rate for CDFS algorithm (default=0.01).")
-def render(algorithm, tensor, network, input_image, output_image, slice, verbose, **kwargs):
+def render(algorithm, tensor, network, input_image, output_image, slice, verbose, resolution, **kwargs):
     """Hallucinate an image for a layer / neuron.
     
     Examples:
@@ -70,12 +71,14 @@ def render(algorithm, tensor, network, input_image, output_image, slice, verbose
             objective = objective[..., slice]
         
         if input_image:
-            base_image = plt.imread(input_image)   
-            image = deep_dream.render_image_deepdream(objective, session, input_pl, base_image)
-            result = utils.process_image(image)
+            base_image = plt.imread(input_image)
         else:
-            # TODO: Add laplace
-            result = deep_dream.render_image_multiscale(objective, session, input_pl) / 255     
+            base_image = deep_dream.get_base_image(resolution, resolution)
+        image = deep_dream.render_image_deepdream(objective, session, input_pl, base_image=base_image)
+        result = utils.process_image(image)
+        # else:
+        #     # TODO: Add laplace
+        #     result = deep_dream.render_image_multiscale(objective, session, input_pl) / 255     
 
         if output_image:
             deep_dream.save_image(result, output_image)
@@ -87,7 +90,7 @@ def render(algorithm, tensor, network, input_image, output_image, slice, verbose
         if verbose:
             print("Loading CDFS...")
         from conveiro import cdfs
-        input_t, decorrelated_image_t, coeffs_t = cdfs.setup(224)
+        input_t, decorrelated_image_t, coeffs_t = cdfs.setup(resolution)
 
         if verbose:
             print(f"Creating model {network}...")
