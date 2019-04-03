@@ -1,3 +1,5 @@
+import itertools
+import os
 import re
 
 import click
@@ -8,36 +10,32 @@ def run_app():
     pass
 
 
-def available_nets():
-    """All network architectures available in tensornets.
-
-    Based on the assumption that each network name starts
-    with a capital letter."""
-    import tensornets as nets
-    candidates = dir(nets)
-    return [candidate for candidate in candidates if candidate[0].isupper()]
+DEFAULT_SIZE = 224
 
 
 @run_app.command()
-@click.option("-a", "--algorithm", default="deep-dream", type=click.Choice(["deep-dream", "cdfs"]))
-@click.option("-n", "--network", help="Architecture of the neural network")
-@click.option("-t", "--tensor", help="Tensor to display.")
-@click.option("-s", "--slice", help="Use only one slice of the tensor.", type=int, required=False)
+@click.option("-r", "--renderer", default="deep-dream", type=click.Choice(["deep-dream", "cdfs"]))
+@click.option("-n", "--network", help="Architecture of the neural network", type=str, required=True)
+@click.option("-l", "--layers", help="Tensors (layers) to render (as comma-separated regexes to match).", type=str, required=True)
+@click.option("-s", "--slices", help="Slices to render (comma-separated numbers, '*' for all, omit for whole tensor).",
+              type=str, required=False)
 @click.option("-c", "--contrast", help="Contrast for the resulting image", type=float, default=0.3)
-@click.option("-r", "--resolution", help="Number of pixels along one dimension (applicable only without input image).", type=int, default=224)
-@click.option("-i", "--input-image", help="If present, source image for hallucination.")
-@click.option("-o", "--output-image", help="Path to write the image to (otherwise just show in a new window).")
+@click.option("-R", "--resolution", help="Number of pixels along one dimension (applicable only without input image).",
+              type=int, default=DEFAULT_SIZE)
+@click.option("-i", "--input-images", help="If present, source image(s) for hallucination.")
+@click.option("-o", "--output-dir", help="Directory to write the image to (otherwise just show in a new window).")
 @click.option("-v", "--verbose", is_flag=True, help="Produce verbose output.")
-@click.option("--cdfs-steps", type=int, default=128, help="Number of steps for CDFS algorithm (default=128).")
-@click.option("--learning-rate", type=float, default=0.01, help="Learning rate for CDFS algorithm (default=0.01).")
-def render(algorithm, tensor, network, input_image, output_image, contrast, slice, verbose, resolution, **kwargs):
+@click.option("-A", "--deep-dream-algorithm", type=click.Choice(["deep-dream", "multi-scale", "laplace"]), default="deep-dream")
+@click.option("-N", "--num-steps", type=int, help="Number of steps (128 for CDFS, 10 for ")
+@click.option("-L", "--cdfs-learning-rate", type=float, default=0.01, help="Learning rate for CDFS algorithm (default=0.01).")
+def render(renderer, layers, network, input_images, output_dir, contrast, slices, verbose, resolution, **kwargs):
     """Hallucinate an image for a layer / neuron.
     
     Examples:
 
     \b
-      conveiro render -n Inception1 -t "inception1/block4c/concat:0" -i docs/mountain.jpeg -o mountain-out.jpg
-      conveiro render -a cdfs -n Inception1 -t "inception1/block3b/concat:0"
+      conveiro render -n Inception1 -t "inception1/block4c/concat" -i docs/mountain.jpeg -o mountains/
+      conveiro render -r cdfs -n Inception1 -t "inception1/block3b/concat"
     """
     if verbose:
         print("Loading tensorflow...")
@@ -45,7 +43,6 @@ def render(algorithm, tensor, network, input_image, output_image, contrast, slic
     if verbose:
         print("Loading tensornets...")
     import tensornets as nets
-    import matplotlib.pyplot as plt
     from conveiro import utils
 
     # Get network
@@ -57,50 +54,75 @@ def render(algorithm, tensor, network, input_image, output_image, contrast, slic
 
     # Set up algorithm
     if verbose:
-            print("Loading {0}...".format(algorithm))
-    if algorithm == "deep-dream":
-        from conveiro import deep_dream
-        input_pl, input_t = deep_dream.setup()
-    elif algorithm == "cdfs":
-        from conveiro import cdfs
-        input_t, decorrelated_image_t, coeffs_t = cdfs.setup(resolution)
+        print("Loading {0}...".format(renderer))
+    if renderer == "deep-dream":
+        renderer = DeepDreamRenderer(size=resolution,
+                                     algorithm=kwargs.get("deep_dream_algorithm"),
+                                     num_steps=kwargs.get("num_steps", None))
+    elif renderer == "cdfs":
+        renderer = CDFSRenderer(size=resolution,
+                                learning_rate=kwargs.get("cdfs_learning_rate"),
+                                num_steps=kwargs.get("num_steps", None))
 
     # Get model and objective
     if verbose:
         print(f"Creating model {network}...")
-    model = constructor(input_t)
+    model = constructor(renderer.input_t)
     graph = tf.get_default_graph()
     session = tf.Session()
     session.run(model.pretrained())
-    objective = graph.get_tensor_by_name(tensor)
-    if slice is not None:
-        objective = objective[..., slice]
-        
-    # Render the image
-    if algorithm == "deep-dream":
-        if input_image:
-            base_image = plt.imread(input_image)
-        else:
-            base_image = deep_dream.get_base_image(resolution, resolution)
-        image = deep_dream.render_image_deepdream(objective, session, input_pl, base_image=base_image)
-        result = utils.normalize_image(image, contrast=contrast)
-            
-    elif algorithm == "cdfs":
-        if input_image:
-            print("Input for CDFS not implemented.")
-            exit(-1)
-        else:
-            image = cdfs.render_image(session, decorrelated_image_t, coeffs_t,
-                                      objective=objective,
-                                      learning_rate=kwargs["learning_rate"],
-                                      num_steps=kwargs["cdfs_steps"])
-            result = utils.normalize_image(image, contrast=contrast)
-   
-    # Output (show or save)    
-    if output_image:
-        utils.save_image(result, output_image)
+
+    all_tensors = available_tensors(graph)
+    op_patterns = layers.split(",")
+    operations = (tensor for tensor in all_tensors if any(re.match(pattern, tensor[0]) for pattern in op_patterns))
+
+    if not input_images:
+        input_images = [None]
     else:
-        utils.show_image(result)
+        input_images = input_images.split(",")
+
+    for tensor_name, _, op_shape in operations:
+        tensor = graph.get_tensor_by_name(tensor_name)
+
+        # Find slices (due to potentially different tensor sizes, this must be in inner loop)
+        if slices is None:
+            objectives = (
+                (None, tensor),
+            )
+        elif slices == "*":
+            objectives = (
+                (i, tensor[..., i]) for i in range(op_shape[-1])
+            )
+        else:
+            indices = [int(i) for i in slices.split(",")]
+            objectives = (
+                (i, tensor[..., i]) for i in indices
+            )
+        print(objectives)
+
+        for index, objective in objectives:
+            if not input_images:
+                input_images = [None]
+            for input_image in input_images:
+                if verbose:
+                    print(f"Rendering {tensor_name}[{index}] for input image {input_image}...")
+
+                result = renderer.render(objective, session, image=input_image)
+                result = utils.normalize_image(result, contrast=contrast)
+
+                if output_dir:
+                    os.makedirs(output_dir, exist_ok=True)
+                    basename = os.path.splitext(os.path.basename(input_image))[0] if input_image else "random"
+                    output_filename = (
+                        basename + "-" +
+                        tensor_name.replace("/", "__") + "-" +
+                        (f"-{index}" if index else "-") +
+                        ".jpg"
+                    )
+                    output_path = os.path.join(output_dir, output_filename)
+                    utils.save_image(result, output_path)
+                else:
+                    utils.show_image(result)
 
 
 @run_app.command()
@@ -177,3 +199,82 @@ def graph(network, output_path):
         dot.view()
     else:
         dot.save(output_path)
+
+
+def available_nets():
+    """All network architectures available in tensornets.
+
+    Based on the assumption that each network name starts
+    with a capital letter."""
+    import tensornets as nets
+    candidates = dir(nets)
+    return [candidate for candidate in candidates if candidate[0].isupper()]
+
+
+def available_tensors(graph):
+    tensors = []
+    ops = graph.get_operations()
+    for m in ops:
+        for tensor in m.outputs:
+            tensors.append((tensor.name, m.type, tensor.shape.as_list()))
+    return tensors
+
+
+
+class CDFSRenderer:
+    """Class representation of the CDFS rendering algorithm with settings."""
+
+    DEFAULT_NUMBER_OF_STEPS = 128
+
+    def __init__(self, size, *, learning_rate, num_steps):
+        from conveiro import cdfs
+        self.input_t, self._decorrelated_image_t, self._coeffs_t = cdfs.setup(size)
+        self.learning_rate = learning_rate
+        self.num_steps = num_steps
+
+    def render(self, objective, session, image=None):
+        if image:
+            raise ValueError("Image input for CDFS not implemented.")
+        from conveiro import cdfs
+        return cdfs.render_image(
+            sess=session,
+            decorrelated_image=self._decorrelated_image_t,
+            coeffs_t=self._coeffs_t,
+            objective=objective,
+            learning_rate=self.learning_rate,
+            num_steps=self.num_steps
+        )
+
+
+class DeepDreamRenderer:
+    """Class representation of the deep dream rendering algorithm with settings."""
+
+    DEFAULT_NUMBER_OF_STEPS = 10
+
+    def __init__(self, size, algorithm="deep-dream", num_steps=None):
+        from conveiro import deep_dream
+        self.size = size
+        self.algorithm = algorithm
+        self.num_steps = num_steps or self.DEFAULT_NUMBER_OF_STEPS
+        self._input_pl, self.input_t = deep_dream.setup()
+
+    def render(self, objective, session, image=None):
+        from conveiro import deep_dream
+        if image:
+            import matplotlib.pyplot as plt
+            base_image = plt.imread(image)
+        else:
+            base_image = deep_dream.get_base_image(self.size, self.size)
+
+        functions = {
+            "laplace": deep_dream.render_image_lapnorm,
+            "multiscale": deep_dream.render_image_multiscale,
+            "deep-dream": deep_dream.render_image_deepdream,
+        }
+        return functions[self.algorithm](
+            objective=objective,
+            session=session,
+            image_pl=self._input_pl,
+            base_image=base_image,
+            iter_n = self.num_steps
+        )
