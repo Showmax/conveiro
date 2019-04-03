@@ -17,7 +17,7 @@ DEFAULT_SIZE = 224
 @click.option("-r", "--renderer", default="deep-dream", type=click.Choice(["deep-dream", "cdfs"]))
 @click.option("-n", "--network", help="Architecture of the neural network", type=str, required=True)
 @click.option("-l", "--layers", help="Tensors (layers) to render (as comma-separated regexes to match).", type=str, required=True)
-@click.option("-s", "--slices", help="Slices to render (comma-separated numbers, '*' for all, omit for whole tensor).",
+@click.option("-s", "--slices", help="Slices to render (comma-separated numbers, ':' for all, omit for whole tensor).",
               type=str, required=False)
 @click.option("-c", "--contrast", help="Contrast for the resulting image", type=float, default=0.3)
 @click.option("-R", "--resolution", help="Number of pixels along one dimension (applicable only without input image).",
@@ -34,10 +34,15 @@ def render(renderer, layers, network, input_images, output_dir, contrast, slices
     Examples:
 
     \b
-      # Hallucinate on mountains in different layers
+      # Hallucinate on mountains in different concat layers
       conveiro render -n Inception1 -l "inception1/block4c/concat" -i docs/mountain.jpeg -o mountains/
 
-      # Get a few "Rorschach" images
+    \b
+      # Relatively large images for all filters in one convolutional layer
+      conveiro render -n Inception1 -l "inception1/block4e/5x5/1/conv/Conv2D" -s : -o conv2d/ -R 512
+
+    \b
+      # Get a few "Rorschach" images from CDFS
       conveiro render -r cdfs -n Inception1 -l "inception1/block../concat" -N 10 -o cfs-concats/
     """
     if verbose:
@@ -92,7 +97,7 @@ def render(renderer, layers, network, input_images, output_dir, contrast, slices
             objectives = (
                 (None, tensor),
             )
-        elif slices == "*":
+        elif slices == ":":
             objectives = (
                 (i, tensor[..., i]) for i in range(op_shape[-1])
             )
