@@ -115,8 +115,8 @@ def render(renderer, layers, network, input_images, output_dir, contrast, slices
                     basename = os.path.splitext(os.path.basename(input_image))[0] if input_image else "random"
                     output_filename = (
                         basename + "-" +
-                        tensor_name[:-2].replace("/", "__") + "-" +
-                        (f"-{index}" if index else "-") +
+                        tensor_name[:-2].replace("/", "__") +
+                        (f"-{index}" if index else "") +
                         ".jpg"
                     )
                     output_path = os.path.join(output_dir, output_filename)
