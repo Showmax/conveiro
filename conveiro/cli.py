@@ -25,8 +25,8 @@ DEFAULT_SIZE = 224
 @click.option("-i", "--input-images", help="If present, source image(s) for hallucination.")
 @click.option("-o", "--output-dir", help="Directory to write the image to (otherwise just show in a new window).")
 @click.option("-v", "--verbose", is_flag=True, help="Produce verbose output.")
-@click.option("-A", "--deep-dream-algorithm", type=click.Choice(["deep-dream", "multi-scale", "laplace"]), default="deep-dream")
 @click.option("-N", "--num-steps", type=int, help="Number of steps (128 for CDFS, 10 for ")
+@click.option("-A", "--deep-dream-algorithm", type=click.Choice(["deep-dream", "multi-scale", "laplace"]), default="deep-dream")
 @click.option("-L", "--cdfs-learning-rate", type=float, default=0.01, help="Learning rate for CDFS algorithm (default=0.01).")
 def render(renderer, layers, network, input_images, output_dir, contrast, slices, verbose, resolution, **kwargs):
     """Hallucinate an image for a layer / neuron.
@@ -34,8 +34,11 @@ def render(renderer, layers, network, input_images, output_dir, contrast, slices
     Examples:
 
     \b
-      conveiro render -n Inception1 -t "inception1/block4c/concat" -i docs/mountain.jpeg -o mountains/
-      conveiro render -r cdfs -n Inception1 -t "inception1/block3b/concat"
+      # Hallucinate on mountains in different layers
+      conveiro render -n Inception1 -l "inception1/block4c/concat" -i docs/mountain.jpeg -o mountains/
+
+      # Get a few "Rorschach" images
+      conveiro render -r cdfs -n Inception1 -l "inception1/block../concat" -N 10 -o cfs-concats/
     """
     if verbose:
         print("Loading tensorflow...")
@@ -74,7 +77,7 @@ def render(renderer, layers, network, input_images, output_dir, contrast, slices
 
     all_tensors = available_tensors(graph)
     op_patterns = layers.split(",")
-    operations = (tensor for tensor in all_tensors if any(re.match(pattern, tensor[0]) for pattern in op_patterns))
+    operations = (tensor for tensor in all_tensors if any(re.fullmatch(pattern + ":0", tensor[0]) for pattern in op_patterns))
 
     if not input_images:
         input_images = [None]
@@ -98,31 +101,28 @@ def render(renderer, layers, network, input_images, output_dir, contrast, slices
             objectives = (
                 (i, tensor[..., i]) for i in indices
             )
-        print(objectives)
 
         for index, objective in objectives:
-            if not input_images:
-                input_images = [None]
             for input_image in input_images:
                 if verbose:
-                    print(f"Rendering {tensor_name}[{index}] for input image {input_image}...")
+                    print(f"Rendering {tensor_name[:-2]}[{index if index is not None else ':'}] for input image {input_image}...")
 
-                result = renderer.render(objective, session, image=input_image)
-                result = utils.normalize_image(result, contrast=contrast)
+                raw_image = renderer.render(objective, session, image=input_image)
+                output_image = utils.normalize_image(raw_image, contrast=contrast)
 
                 if output_dir:
                     os.makedirs(output_dir, exist_ok=True)
                     basename = os.path.splitext(os.path.basename(input_image))[0] if input_image else "random"
                     output_filename = (
                         basename + "-" +
-                        tensor_name.replace("/", "__") + "-" +
+                        tensor_name[:-2].replace("/", "__") + "-" +
                         (f"-{index}" if index else "-") +
                         ".jpg"
                     )
                     output_path = os.path.join(output_dir, output_filename)
-                    utils.save_image(result, output_path)
+                    utils.save_image(output_image, output_path)
                 else:
-                    utils.show_image(result)
+                    utils.show_image(output_image)
 
 
 @run_app.command()
@@ -230,7 +230,7 @@ class CDFSRenderer:
         from conveiro import cdfs
         self.input_t, self._decorrelated_image_t, self._coeffs_t = cdfs.setup(size)
         self.learning_rate = learning_rate
-        self.num_steps = num_steps
+        self.num_steps = num_steps or self.DEFAULT_NUMBER_OF_STEPS
 
     def render(self, objective, session, image=None):
         if image:
@@ -253,7 +253,7 @@ class DeepDreamRenderer:
 
     def __init__(self, size, algorithm="deep-dream", num_steps=None):
         from conveiro import deep_dream
-        self.size = size
+        self.size = size or DEFAULT_SIZE
         self.algorithm = algorithm
         self.num_steps = num_steps or self.DEFAULT_NUMBER_OF_STEPS
         self._input_pl, self.input_t = deep_dream.setup()
@@ -276,5 +276,9 @@ class DeepDreamRenderer:
             session=session,
             image_pl=self._input_pl,
             base_image=base_image,
-            iter_n = self.num_steps
+            iter_n=self.num_steps
         )
+
+
+if __name__ == '__main__':
+    render(["-n", "Inception1", "-l", "inception1/block4a/concat"])
