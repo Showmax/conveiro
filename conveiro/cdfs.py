@@ -254,39 +254,6 @@ def setup_optimizer(target, coeffs, learning_rate, use_adam=False, namespace="op
     grads = opt.compute_gradients(-target, var_list=[coeffs])
     return opt.apply_gradients(grads)
 
-def show_image(image, scale=0.4, bgr=False, axis=False):
-  """
-  Preprocess and show an image.
-  :param image:       An image.
-  :param scale:       Scaling parameter.
-  :param bgr:         Swap red and blue channels.
-  :return:            None.
-  """
-
-  image = model_utils.process_image(image, scale=scale, bgr=bgr)
-
-  if not axis:
-    plt.axis('off')
-
-  plt.imshow(image)
-
-  plt.show()
-
-
-def save_image(image, path, scale=0.4, bgr=False):
-  """Save image.
-
-  :param image: Image to be saved (as n x m x 3 numpy array).
-  :param path: Where to store the image.
-
-  Note: Requires PIL (or pillow).
-  """
-  from PIL import Image
-  image = model_utils.process_image(image, scale=scale, bgr=bgr)
-  im = Image.fromarray((image * 256).astype(np.uint8), mode="RGB")
-  im.save(path)
-
-
 def reset_optimizer(session, coeffs, opt_vars):
   """
   Reset the optimizer and the image parameters.

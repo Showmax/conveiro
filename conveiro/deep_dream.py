@@ -327,21 +327,6 @@ def render_deepdream(objective, session, image_pl, img0, resize_op, resize_image
       
   return img
 
-
-def show_image(image, axis=False):
-  """
-  Shows image using matplotlib.
-  :param image:      Image to be displayed.
-  :param axis:       Display axis.
-
-  """
-  image = np.clip(image, 0, 1)
-
-  plt.imshow(image)
-  if not axis:
-    plt.axis('off')
-  plt.show()
-
 def render_image_lapnorm(objective, session, image_pl,
                    iter_n=10, step=1.0, octave_n=3, octave_scale=1.4, means=None,
                    is_training_pl=None, base_image=None):
@@ -409,22 +394,7 @@ def render_image_deepdream(objective, session, image_pl, base_image,
 
   resize_op, resize_image_pl, resize_shape_pl = setup_resize()
   
-  return render_deepdream(objective, session, image_pl, base_image, resize_op, resize_image_pl, resize_shape_pl, iter_n, step, octave_n, octave_scale) 
-
-
-
-def save_image(image, path):
-  """Save image.
-
-  :param image: Image to be saved (as n x m x 3 numpy array).
-  :param path: Where to store the image.
-
-  Note: Requires PIL (or pillow).
-  """
-  from PIL import Image
-  im = Image.fromarray(image.astype(np.uint8), mode="RGB")
-  im.save(path)
-
+  return render_deepdream(objective, session, image_pl, base_image, resize_op, resize_image_pl, resize_shape_pl, iter_n, step, octave_n, octave_scale)
 
 def setup(means=None):
   """
