@@ -321,7 +321,7 @@ def render_deepdream(objective, session, image_pl, img0, resize_op, resize_image
       if octave>0:
           hi = octaves[-octave]
           img = resize(img, hi.shape[:2], resize_image_pl, resize_shape_pl, resize_op, session)+hi
-      for i in range(iter_n):
+      for _ in range(iter_n):
           g = calc_grad_tiled(img, t_grad, session, image_pl)
           img += g*(step / (np.abs(g).mean()+1e-7))
       

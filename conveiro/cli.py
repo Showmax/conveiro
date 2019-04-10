@@ -146,7 +146,6 @@ def networks():
     Note that not all architectures and not all tensors
     can be visualized.
     """
-    import tensornets as nets
     print("Available network architectures:")
     for candidate in available_nets():
         print(" ", candidate)
