@@ -1,5 +1,5 @@
-0.2 (2nd Apr 2019)
-------------------
+0.2 (10th Apr 2019)
+-------------------
 Added the `conveiro` command-line tool
 
 0.1.1 (14th Jan 2019)
