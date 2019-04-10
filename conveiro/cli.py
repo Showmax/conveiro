@@ -147,16 +147,16 @@ def nets():
 @click.argument("network")
 @click.option("-t", "--type", help="Operation type to filter")
 @click.option("-n", "--name", help="Regular expression for operation name to search for")
-def tensors(network, type, name):
-    """List available tensors in a network.
+def layers(network, type, name):
+    """List available layers (operations) in a network.
     
     Examples:
 
     \b
-      conveiro tensors Inception1
-      conveiro tensors Inception1 -t Conv2D -n block5b
+      conveiro layers Inception1
+      conveiro layers Inception1 -t Conv2D -n block5b
 
-    Note that not all architectures and not all tensors
+    Note that not all architectures and not all layers
     can be visualized.
     """
     import tensorflow as tf
