@@ -44,17 +44,20 @@ def bgr_to_rgb(image):
   image[..., 2] = tmp
   return image
 
-def normalize_image(image, contrast=DEFAULT_CONTRAST):
+def normalize_image(image, contrast=DEFAULT_CONTRAST, bw=False):
   """Normalize the image using mean and std dev.
 
   :param image:     An image.
-  :param contrast:  Multiplication factor for the distance from mean.
+  :param contrast:  Multiplication factor for the distance from medium gray (0.5, 0.5, 0.5).
+  :param bw:        If True, convert the image to grayscale
   :return:          Normalized image (as numbers 0 to 1)
 
   Note: The larger the `contrast`, the more visible features in the image and the 
   larger areas of the image will be clipped to 0 or 1.
   """
   image = (image - image.mean()) / max(image.std(), 1e-4) * contrast + 0.5
+  if bw:
+    image[:] = image.mean(axis=2)[..., np.newaxis]
   image = np.clip(image, 0, 1)
   return image
 
@@ -93,7 +96,7 @@ def create_graph(model_constructor):
   input_pl = tf.placeholder(tf.float32, shape=(None, None, 3), name="input")
   input_t = tf.expand_dims(input_pl, axis=0)
 
-  model = model_constructor(input_t)
+  _ = model_constructor(input_t)
   graph = tf.get_default_graph()
 
   # Inspired by https://blog.jakuba.net/2017/05/30/Visualizing-TensorFlow-Graphs-in-Jupyter-Notebooks/

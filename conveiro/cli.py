@@ -33,6 +33,7 @@ DEFAULT_SIZE = 224
 @click.option("-N", "--num-steps", type=int, help="Number of steps (128 for CDFS, 10 for deep dream.")
 @click.option("-A", "--deep-dream-algorithm", type=click.Choice(["deep-dream", "multi-scale", "laplace"]), default="deep-dream")
 @click.option("-L", "--cdfs-learning-rate", type=float, default=0.01, help="Learning rate for CDFS algorithm (default=0.01).")
+@click.option("-g", "--grayscale", is_flag=True, help="Produce grayscale image.")
 def render(renderer, layers, network, input_images, output_dir, contrast, slices, verbose, resolution, **kwargs):
     """Hallucinate an image for a layer / neuron.
     
@@ -51,8 +52,8 @@ def render(renderer, layers, network, input_images, output_dir, contrast, slices
       conveiro render -r cdfs -n Inception1 -l "inception1/block../concat" -N 10 -o cfs-concats/
 
     \b
-      # Create an artificial cheetah-like image using Inception1
-      conveiro render -n Inception1 -l inception1/logits/MatMul -s 293 -R 256 -o cheetah/ -N 100 -v
+      # Create an artificial grayscale cheetah-like image using Inception1
+      conveiro render -n Inception1 -l inception1/logits/MatMul -s 293 -R 256 -o cheetah/ -N 100 -g
     """
     if verbose:
         print("Loading tensorflow...")
@@ -119,10 +120,10 @@ def render(renderer, layers, network, input_images, output_dir, contrast, slices
         for index, objective in objectives:
             for input_image in input_images:
                 if verbose:
-                    print(f"Rendering {tensor_name[:-2]}[{index if index is not None else ':'}] for input image {input_image}...")
+                    print(f"Rendering {tensor_name[:-2]}[{index if index is not None else ':'}] from {input_image if input_image else 'random noise'}...")
 
                 raw_image = renderer.render(objective, session, image=input_image)
-                output_image = utils.normalize_image(raw_image, contrast=contrast)
+                output_image = utils.normalize_image(raw_image, contrast=contrast, bw=kwargs.get("grayscale", False))
 
                 if output_dir:
                     os.makedirs(output_dir, exist_ok=True)
@@ -179,7 +180,7 @@ def layers(network, type, name):
     input_pl = tf.placeholder(tf.float32, shape=(None, None, 3), name="input")
     input_t = tf.expand_dims(input_pl, axis=0)
 
-    model = constructor(input_t)
+    _ = constructor(input_t)
     graph = tf.get_default_graph()
     ops = graph.get_operations()
     if name:
@@ -196,7 +197,6 @@ def layers(network, type, name):
 @click.option("-o", "--output-path", help="Path to write the graph to (in dot format).")
 def graph(network, output_path):
     """Create a graph of the network architecture."""
-    import tensorflow as tf
     import tensornets as nets
     from conveiro import utils
 
