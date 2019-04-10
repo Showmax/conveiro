@@ -8,7 +8,7 @@ All of these methods are based on:
 
 Deep dream is implementation of technique based on
 
-  * https://github.com/tensorflow/tensorflow/blob/master/tensorflow/examples/tutorials/deepdream/deepdream.ipynb
+* https://github.com/tensorflow/tensorflow/blob/master/tensorflow/examples/tutorials/deepdream/deepdream.ipynb
 * https://ai.googleblog.com/2015/06/inceptionism-going-deeper-into-neural.html
 
 How it works:
@@ -59,10 +59,10 @@ that can visualize and hallucinate networks from `tensornets` library.
 Usage: conveiro COMMAND [OPTIONS] [ARGS]...
 
 Commands:
-  graph    Create a graph of the network architecture.
-  nets     List available network architectures (from tensornets).
-  render   Hallucinate an image for a layer / neuron.
-  tensors  List available tensors in a network.
+  graph     Create a graph of the network architecture.
+  layers    List available layers (operations) in a network.
+  networks  List available network architectures (from tensornets).
+  render    Hallucinate an image for a layer / neuron.
 ```
 
 Run `conveiro --help` or `conveiro [command-name] --help` to 

@@ -1,3 +1,8 @@
+#!/usr/bin/env python3
+"""The CLI tool of conveiro library.
+
+This gets called as `conveiro` after installing using `pip`.
+"""
 import itertools
 import os
 import re
@@ -131,7 +136,7 @@ def render(renderer, layers, network, input_images, output_dir, contrast, slices
 
 
 @run_app.command()
-def nets():
+def networks():
     """List available network architectures (from tensornets).
     
     Note that not all architectures and not all tensors
@@ -217,6 +222,7 @@ def available_nets():
 
 
 def available_tensors(graph):
+    """All tensors in the model's graph."""
     tensors = []
     ops = graph.get_operations()
     for m in ops:
