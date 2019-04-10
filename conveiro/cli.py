@@ -121,7 +121,7 @@ def render(renderer, layers, network, input_images, output_dir, contrast, slices
                     output_filename = (
                         basename + "-" +
                         tensor_name[:-2].replace("/", "__") +
-                        (f"-{index}" if index else "") +
+                        (f"-{index}" if index is not None else "") +
                         ".jpg"
                     )
                     output_path = os.path.join(output_dir, output_filename)
