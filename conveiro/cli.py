@@ -49,6 +49,10 @@ def render(renderer, layers, network, input_images, output_dir, contrast, slices
     \b
       # Get a few "Rorschach" images from CDFS
       conveiro render -r cdfs -n Inception1 -l "inception1/block../concat" -N 10 -o cfs-concats/
+
+    \b
+      # Create an artificial cheetah-like image using Inception1
+      conveiro render -n Inception1 -l inception1/logits/MatMul -s 293 -R 256 -o cheetah/ -N 100 -v
     """
     if verbose:
         print("Loading tensorflow...")
