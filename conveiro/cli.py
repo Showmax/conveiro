@@ -25,7 +25,7 @@ DEFAULT_SIZE = 224
 @click.option("-i", "--input-images", help="If present, source image(s) for hallucination.")
 @click.option("-o", "--output-dir", help="Directory to write the image to (otherwise just show in a new window).")
 @click.option("-v", "--verbose", is_flag=True, help="Produce verbose output.")
-@click.option("-N", "--num-steps", type=int, help="Number of steps (128 for CDFS, 10 for ")
+@click.option("-N", "--num-steps", type=int, help="Number of steps (128 for CDFS, 10 for deep dream.")
 @click.option("-A", "--deep-dream-algorithm", type=click.Choice(["deep-dream", "multi-scale", "laplace"]), default="deep-dream")
 @click.option("-L", "--cdfs-learning-rate", type=float, default=0.01, help="Learning rate for CDFS algorithm (default=0.01).")
 def render(renderer, layers, network, input_images, output_dir, contrast, slices, verbose, resolution, **kwargs):
@@ -285,5 +285,5 @@ class DeepDreamRenderer:
         )
 
 
-if __name__ == '__main__':
-    render(["-n", "Inception1", "-l", "inception1/block4a/concat"])
+if __name__ == "__main__":
+    run_app()
