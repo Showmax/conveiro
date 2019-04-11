@@ -2,3 +2,5 @@
 - Antonín Říha - https://github.com/anriha
 - Jan Pipek - https://github.com/janpipek
 - Tomáš Drvoštěp - https://github.com/Drvi 
+- Pavel Kordík - https://github.com/kordikp
+- Adam Činčura - https://github.com/Ciselnak
