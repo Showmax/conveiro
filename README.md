@@ -98,3 +98,7 @@ with tf.Session() as sess:
 ![CDFS output](docs/example.png)
 
 **Note** The API is preliminary and may change in future versions.
+
+## Articles
+
+* [Showmax Tech Blog: Introducing Conveiro...](https://tech.showmax.com/2019/04/conveiro/)
