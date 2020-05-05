@@ -33,7 +33,7 @@ There are few more steps but this is the essence of this technique.
 ## Requirements
 
 * Python 3.4 and above
-* Tensorflow (CPU or GPU variant)
+* Tensorflow (CPU or GPU variant, version 2 not yet supported)
 * Numpy
 * Matplotlib
 * click, tensornets, pillow, graphviz (if you want to use the command-line tool with examples)

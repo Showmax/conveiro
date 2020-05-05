@@ -24,8 +24,8 @@ setup(
     include_package_data=True,
     install_requires=['numpy', 'matplotlib', 'scipy', 'pillow'],
     extras_require = {
-        'gpu' : ['tensorflow-gpu'],
-        'cpu' : ['tensorflow'],
+        'gpu' : ['tensorflow-gpu<2.0'],
+        'cpu' : ['tensorflow<2.0'],
         'examples' : ['tensornets'],
         'cli': ['tensornets', 'click', 'graphviz']
     },

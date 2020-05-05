@@ -1,7 +1,7 @@
 scipy
 numpy
 matplotlib
-tensorflow
+tensorflow<2.0
 tensornets
 pillow
 click
